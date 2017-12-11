@@ -1,0 +1,18 @@
+# This is the GRCh37 run
+
+# These three must be filled in
+tumor_bam = TUMOR_BAM
+normal_bam = NORMAL_BAM
+sample_name = SAMPLE_NAME
+
+reference_fasta = /data/A_Reference/Homo_sapiens_assembly19.fasta
+reference_dict = /data/A_Reference/Homo_sapiens_assembly19.dict
+assembly = GRCh37
+
+dbsnp_db = /data/B_Filter/dbsnp.noCOSMIC.GRCh37.vcf.gz
+
+sw_dir = /gscuser/mwyczalk/projects/SomaticWrapper/somaticwrapper
+
+# This creates VEP data annotated with gene names both as final output and for key intermediate files
+output_vep = 1
+annotate_intermediate = 1
