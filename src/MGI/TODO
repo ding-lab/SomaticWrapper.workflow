@@ -1,8 +1,0 @@
-Create SomaticWrapper.workflow project, based on similar work for GDC_Import
-    This is essentially SomaticWrapper.analysis, but not project specific
-
-Create SomaticWrapper.CPTAC3.b1.MGI, which is a thin project which drives .workflow
-
-All submission scripts, tracking of processing, MGI vs. DC2 functionality, etc. is moved to .workflow
-
-Need to import all GDC_import projects to epazote

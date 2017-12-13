@@ -1,3 +1,12 @@
+This is prior work developing Docker workflow at MGI.  See below for
+* description of MGI Docker evironment
+* how to launch jobs
+* analysis of results from docker and master branches, showing things work
+
+Scripts in this directory are superceded by those in ../src
+
+-----
+
 MGI environment is unique and requires different procedures.  Specifically,
 * Docker environment has MGI volumes mounted
     * Both Docker and MGI data available
@@ -18,35 +27,6 @@ MGI environment is unique and requires different procedures.  Specifically,
     * Will execute on an arbitrary machine
         * Container data in e.g. /data is lost when job exits unless shared volume mounted during initialization
 
-
-Current Goal: 
-
-reproduce analysis done by Song for sample 01BR001, whose run is found here:
-    /gscuser/scao/gc2521/dinglab/cptac_prospective_samples/exome/somatic/test.for.matt
-        
-Principal paths:
-
-    Data directory - host: /gscmnt/gc2521/dinglab/mwyczalk/somatic-wrapper-data
-                     Note, soft link here: /gscuser/mwyczalk/projects/SomaticWrapper
-    Data directory - container: /data
-    Config file - /data/run_config/01BR001.config
-    BSUB output directory: /gscuser/mwyczalk/projects/SomaticWrapper/runtime_bsub
-
-Progress: 
-
-[1]  Run streka - OK
-[2]  Run Varscan - OK
-[3]  Parse streka result - OK.  But sorting here fails
-[4]  Parse VarScan result - OK
-[5]  Run Pindel - OK
-[6]  Run VEP annotation - not running
-[7]  Parse Pindel - OK
-[8]  Merge vcf files using local VEP cache - problems here
-[9] generate maf file
-
-Executing steps: 
-
-Each step can be run either from within the container, or by submitting a job for execution on cluster.
 
 ## Preliminary steps
 
