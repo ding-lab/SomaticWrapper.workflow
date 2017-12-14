@@ -135,6 +135,14 @@ cat << EOF > $SCRIPT
 #!/bin/bash
 
 # This is an automatically generated script for executing SomaticWrapper within docker container
+# environment variables are same generally same as those in /home/sw/.bashrc
+export TERM=xterm
+export LD_LIBRARY_PATH=/usr/local/htslib
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=/home/sw
+export PERL5LIB=$SW_HOME_C
+export LANG=""
+export PYTHONPATH="" 
 
 cd $SW_HOME_C
 perl $SW_HOME_C/SomaticWrapper.pl $STEP $CONFIG
