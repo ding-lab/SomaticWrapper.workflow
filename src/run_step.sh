@@ -8,6 +8,7 @@
 # Key Directories, [H] and [C] indicate whether paths relative to host machine or container
 # * DATAD - mount point of container's /data on host machine [H]
 # * SWW_HOME - path to SomaticWrapper.workflow [H]
+# * SW_HOME_C - path to SomaticWrapper.workflow relative to container
 # * SCRIPTD - location of LSF logs and launch scripts [H]
 # * CONFIGD - location of config files, visible from container [C]
 # * SWDATA - base directory of SomaticWrapper data output [C].  This is passed via configuation file
@@ -16,6 +17,7 @@
 # -D DATAD: path to base of data directory, which maps to /data in container. Required
 # -s SCRIPTD: Logs and scripts will be written to $SCRIPTD/logs and /launch, respectively.  Required
 # -p SWW_HOME: Must be set with -p or SWW_HOME environment variable.
+# -w SW_HOME_C: default [/usr/local/somaticwrapper]
 # -c CONFIGD: default [/data/config].  Configuration file is $CONFIGD/$SN.config
 #
 # Other arguments
@@ -24,6 +26,7 @@
 #     with each called function called in dry run mode if it gets one -d, and popping off one and passing rest otherwise
 # -g LSF_GROUP: LSF group to use starting job
 # -M: MGI environment.  Non-MGI environment currently not implemented
+# -h DOCKERHOST - define a LSF host to execute the image.  MGI only
 # -B: Run BASH in Docker instead of gdc-client
 # -m mGb: requested memory in Gb (requires numeric step, e.g. '1')
 #
@@ -54,11 +57,11 @@ else    # DRYRUN has multiple d's: strip one d off the argument and pass it to f
 fi
 
 ARGS="$ARGS -D $DATAD -s $SCRIPTD -c $CONFIGD"
-if [ -z $LSFMEM ]; then
+if [ ! -z $LSFMEM ]; then
     ARGS="$ARGS -m $LSFMEM"
 fi
 
-$BASH $SWW_HOME/submit-MGI.sh $ARGS $UUID $STEP 
+$BASH $SWW_HOME/src/submit-MGI.sh $ARGS $UUID $STEP 
 }
 
 function launch_run {
@@ -89,7 +92,7 @@ function launch_step {
 
 CONFIGD="/data/config"
 
-while getopts ":D:s:p:c:S:dg:MBm:" opt; do
+while getopts ":D:s:p:c:S:dg:MBm:w:h:" opt; do
   case $opt in
     D) # set DATAD
       DATAD="$OPTARG"
@@ -125,6 +128,12 @@ while getopts ":D:s:p:c:S:dg:MBm:" opt; do
     m)
       MEMGB="$OPTARG"
       >&2 echo "Setting memory $MEMGB Gb"
+      ;;
+    w)  # SW_HOME_C
+      XARGS="$XARGS -w $OPTARG"
+      ;;
+    h)  # DOCKERHOST
+      XARGS="$XARGS -h $OPTARG"
       ;;
     \?)
       >&2 echo "Invalid option: -$OPTARG"

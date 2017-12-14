@@ -5,11 +5,11 @@ tumor_bam = TUMOR_BAM
 normal_bam = NORMAL_BAM
 sample_name = SAMPLE_NAME
 
-reference_fasta = /data/A_Reference/GRCh38.d1.vd1.fa
-reference_dict = /data/A_Reference/GRCh38.d1.vd1.dict
+reference_fasta = /data/image.data/A_Reference/GRCh38.d1.vd1.fa
+reference_dict = /data/image.data/A_Reference/GRCh38.d1.vd1.dict
 assembly = GRCh38
 
-dbsnp_db = /data/B_Filter/dbsnp.noCOSMIC.GRCh38.vcf.gz
+dbsnp_db = /data/image.data/B_Filter/dbsnp.noCOSMIC.GRCh38.vcf.gz
 
 sw_dir = /gscuser/mwyczalk/projects/SomaticWrapper/somaticwrapper
 # This creates VEP data annotated with gene names both as final output and for key intermediate files

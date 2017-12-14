@@ -10,7 +10,7 @@
 # -s SCRIPTD - Script run base directory, where bsub output and scripts will be written.  Required.  Path relative to host
 # -c CONFIGD - configuration file direcotry; config file is $CONFIGD/$SN.config.  Default [/data/config]
 #   (content of such files described in SomaticWrapper.pl).  Path relative to container
-
+# -w SW_HOME_C - path to SomaticWrapper in container.  Default [/usr/local/somaticwrapper]
 # -m MEMGb - integer indicating number of gigabytes to allocate.  Default value (set by MGI) is possibly 8
 # -h DOCKERHOST - define a host to execute the image
 # -d: dry run - print out run command but do not execute (for debugging)
@@ -31,33 +31,18 @@ DOCKER_IMAGE="mwyczalkowski/somatic-wrapper:mgi"
 # Old defaults.  now all of these required to be passed
 # Where container's /data is mounted on host
 #DATAD="/gscmnt/gc2521/dinglab/mwyczalk/somatic-wrapper-data"
-#SW="/gscuser/mwyczalk/projects/SomaticWrapper/somaticwrapper"
+#SW_HOME_C="/gscuser/mwyczalk/projects/SomaticWrapper/somaticwrapper"
 #SCRIPTD_BASE="/gscuser/mwyczalk/projects/SomaticWrapper/runtime_bsub"
 
-# SW is path relative to container to SomaticWrapper project.
-# We assume that SomaticWrapper is installed in image at /usr/local/SomaticWrapper
-SW="/usr/local/somaticwrapper"
-
-}
+# SW_HOME_C is path relative to container to SomaticWrapper project.
+# We SomaticWrapper is installed in image at /usr/local/SomaticWrapper
+# This default can be overridden with -w to use some other copy
+SW_HOME_C="/usr/local/somaticwrapper"
 
 LSF_ARGS=""
 
-# -D DATAD - path to container's /data mounted on host.  Required.  Path relative to host
-# -s SCRIPTD - Script run base directory, where bsub output and scripts will be written.  Required.  Path relative to host
-# -c CONFIGD - configuration file direcotry; config file is $CONFIGD/$SN.config.  Default [/data/config]
-#   (content of such files described in SomaticWrapper.pl).  Path relative to container
-
-# -m MEMGb - integer indicating number of gigabytes to allocate.  Default value (set by MGI) is possibly 8
-# -h DOCKERHOST - define a host to execute the image
-# -d: dry run - print out run command but do not execute (for debugging)
-#     This may be repeated (e.g., -dd or -d -d) to pass the -d argument to called functions instead,
-#     with each called function called in dry run mode if it gets one -d, and popping off one and passing rest otherwise
-# -g LSF_GROUP: LSF group to start in.  MGI-specific
-# -B: run bash instead of starting SomaticWrapper
-
-
 # http://wiki.bash-hackers.org/howto/getopts_tutorial
-while getopts "D:s:c:m:h:dg:B" opt; do
+while getopts "D:s:c:w:m:h:dg:B" opt; do
   case $opt in
     D)
       DATAD=$OPTARG
@@ -69,6 +54,10 @@ while getopts "D:s:c:m:h:dg:B" opt; do
     c)
       CONFIGD=$OPTARG
       >&2 echo "Setting config directory $CONFIGD" 
+      ;;
+    w)
+      SW_HOME_C=$OPTARG
+      >&2 echo "Setting SomaticWrapper directory $SW_HOME_C" 
       ;;
     m)
       MEMGB=$OPTARG  
@@ -136,8 +125,8 @@ SCRIPT="$LAUNCHD/$SN.step_$STEP.sh"
 >&2 echo Generating run script $SCRIPT
 
 # logs will be written to $SCRIPTD/bsub_run-step_$STEP.err, .out
-ERRLOG="$LOGD/$UUID.STEP-${STEP}.err"
-OUTLOG="$LOGD/$UUID.STEP-${STEP}.out"
+ERRLOG="$LOGD/$SN.STEP-${STEP}.err"
+OUTLOG="$LOGD/$SN.STEP-${STEP}.out"
 LOGS="-e $ERRLOG -o $OUTLOG"
 rm -f $ERRLOG $OUTLOG
 >&2 echo Writing bsub logs to $OUTLOG and $ERRLOG
@@ -145,11 +134,10 @@ rm -f $ERRLOG $OUTLOG
 cat << EOF > $SCRIPT
 #!/bin/bash
 
-# This is an automatically generated script for launching bsub jobs
+# This is an automatically generated script for executing SomaticWrapper within docker container
 
-source /home/bps/mgi-bps.bashrc
-cd $SW
-perl $SW/SomaticWrapper.pl /data/data $STEP $CONFIG
+cd $SW_HOME_C
+perl $SW_HOME_C/SomaticWrapper.pl $STEP $CONFIG
 EOF
 
 # If DRYRUN is 'd' then we're in dry run mode (only print the called function),
@@ -166,11 +154,14 @@ else    # DRYRUN has multiple d's: pop one d off the argument and pass it to fun
 fi 
 
 # XARGS is a generic way to pass arguments to the run script.  They are not used here, but
-# more sophisticated scripts may read them.  
+# more sophisticated versions of SCRIPT may read them.  
 
 if [ -z $RUNBASH ]; then
-    CMD="/bin/bash $SCRIPT $XARGS" 
+    CMD="/bin/bash --rcfile /home/sw/.bashrc $SCRIPT $XARGS" 
     $BSUB -q research-hpc $LSF_ARGS $LOGS -a "docker ($DOCKER_IMAGE)"  "$CMD"
 else
-    $BSUB -q research-hpc $LSF_ARGS -Is -a "docker($DOCKER_IMAGE)" "/bin/bash"
+    # Start script simply sources the environment variables to make MGI behave reasonably
+    START="/home/sw/mgi-sw_start.sh"
+    $BSUB -q research-hpc $LSF_ARGS -Is -a "docker($DOCKER_IMAGE)" "/bin/bash --rcfile /home/sw/.bashrc"
+    #$BSUB -q research-hpc $LSF_ARGS -Is -a "docker($DOCKER_IMAGE)" "/bin/bash $START"
 fi
