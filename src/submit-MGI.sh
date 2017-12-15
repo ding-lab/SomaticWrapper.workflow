@@ -131,11 +131,13 @@ LOGS="-e $ERRLOG -o $OUTLOG"
 rm -f $ERRLOG $OUTLOG
 >&2 echo Writing bsub logs to $OUTLOG and $ERRLOG
 
+# this script below is icky but for some reason `source /home/sw/.bashrc` does not make
+# variables "stick" - echo $PATH returns MGI environment.  Worth investigating more
 cat << EOF > $SCRIPT
 #!/bin/bash
 
-# This is an automatically generated script for executing SomaticWrapper within docker container
-# environment variables are same generally same as those in /home/sw/.bashrc
+# This is an automatically generated script for executing SomaticWrapper within MGI docker container
+# environment variables are generally same as those in /home/sw/.bashrc
 export TERM=xterm
 export LD_LIBRARY_PATH=/usr/local/htslib
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -169,7 +171,6 @@ if [ -z $RUNBASH ]; then
     $BSUB -q research-hpc $LSF_ARGS $LOGS -a "docker ($DOCKER_IMAGE)"  "$CMD"
 else
     # Start script simply sources the environment variables to make MGI behave reasonably
-    START="/home/sw/mgi-sw_start.sh"
     $BSUB -q research-hpc $LSF_ARGS -Is -a "docker($DOCKER_IMAGE)" "/bin/bash --rcfile /home/sw/.bashrc"
     #$BSUB -q research-hpc $LSF_ARGS -Is -a "docker($DOCKER_IMAGE)" "/bin/bash $START"
 fi
