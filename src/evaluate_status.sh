@@ -13,6 +13,8 @@
 # -D DATAD: path to base of SomaticWrapper analysis directory.  Required
 # -S SCRIPTD: path to LSF logs. Required
 # -M: MGI environment.  Evaluate LSF logs 
+# -g: debug mode.  print debug statements of logic tests
+# -1: quit after one.
 
 
 # Look at importGDC/batch.import/evaluate_status.sh
@@ -22,6 +24,12 @@
 # For now, we'll grep for "Successfully completed." in the .out file of the submitted job
 # This will probably not catch jobs which exit early for some reason (memory, etc), and is LSF specific
 
+function debug {
+    if [ $DEBUG ]; then
+        >&2 echo DEBUG: "$@"
+    fi
+}
+
 # pass filename of log file, "completed" if finished successfully, "running" if not, and "unknown" if associated 
 # log file does not exist
 function test_LSF_success {
@@ -29,21 +37,24 @@ function test_LSF_success {
 LOG=$1
 
 if [ ! -e $LOG ]; then
-#>&2 echo Warning: $LOG does not seem to exist
-echo unknown
-return
+    debug $LOG does not seem to exist
+    echo unknown
+    return
 fi
 
 ERROR="Exited with exit code"
 if grep -Fq "$ERROR" $LOG; then
+    debug $LOG : $ERROR
     echo error
     return
 fi
 
 SUCCESS="Successfully completed."
 if grep -Fxq "$SUCCESS" $LOG; then
+    debug $LOG : $SUCCESS
     echo completed
 else
+    debug $LOG : NOT $SUCCESS
     echo running
 fi
 }
@@ -56,12 +67,13 @@ STROUT=$1
 STRERR=$2
 
 if [ ! -e $STRERR ]; then  # Error log does not exist
-#>&2 echo Warning: $F does not seem to exist
-echo unknown
-return
+    debug $STRERR does not seem to exist
+    echo unknown
+    return
 fi
 
 if grep -Fq "ERROR" $STRERR; then
+    debug $STRERR has ERROR
     echo error
     return
 fi
@@ -126,7 +138,6 @@ LOGD="$SCRIPTD/logs"
 #ERRLOG="$LOGD/$SN.STEP-${STEP}.err"
 #OUTLOG="$LOGD/$SN.STEP-${STEP}.out"
 
-
 TEST1=$(test_strelka_success $LOGD/${SN}.STEP-1.out $LOGD/${SN}.STEP-1.err)  # run_strelka
 TEST2=$(test_LSF_success $LOGD/${SN}.STEP-2.out)  # run_varscan
 TEST5=$(test_pindel_success $LOGD/${SN}.STEP-5.out $LOGD/${SN}.STEP-5.err)  # run_pindel
@@ -143,7 +154,7 @@ printf "$SN\trun_strelka:$TEST1\trun_varscan:$TEST2\trun_pindel:$TEST5\tparse_st
 }
 
 # http://wiki.bash-hackers.org/howto/getopts_tutorial
-while getopts ":uf:D:S:" opt; do
+while getopts ":uf:D:S:g1" opt; do
   case $opt in
     u)  
       SN_ONLY=1
@@ -159,6 +170,12 @@ while getopts ":uf:D:S:" opt; do
       ;;
     S) 
       SCRIPTD="$OPTARG"
+      ;;
+    g)  
+      DEBUG=1
+      ;;
+    1)  
+      QAO=1 # quot after one
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -180,7 +197,6 @@ fi
 
 BATCH=$1
 
-DATD="$DATA_DIR/GDC_import"
 if [ ! -e $DATD ]; then
     >&2 echo "Error: Data directory does not exist: $DATD"
     exit 1
@@ -190,7 +206,7 @@ while read L; do
     # Skip comments and header
     [[ $P = \#* ]] && continue
 
-    SN=$(echo "$L" | cut -f 1)   # sample name
+    SN=$(echo "$L" | cut -f 2)   # sample name
 
     STATUS=$(get_job_status $SN )
 
@@ -207,7 +223,9 @@ while read L; do
         echo "$STATUS" | cut -f $COLS
     fi
 
-    exit
+    if [ ! -z $QAO ]; then
+        exit 
+    fi
 
 done <$BATCH
 
