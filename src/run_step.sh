@@ -31,17 +31,16 @@
 # -m mGb: requested memory in Gb (requires numeric step, e.g. '1')
 #
 # If argument SN is - then read SN from STDIN
-# Note that SN and UUID are used interchangeably here
 
 
 function submit-MGI {
-UUID=$1
-STEP=$2
+SN=$1
+mSTEP=$2
 LSFMEM=$3  # Mem request in Gb, may be empty
 
 ARGS=$XARGS  # XARGS is a global, don't want to modify it here
 
->&2 echo Starting step $STEP for $UUID 
+>&2 echo Starting step $mSTEP for $SN 
 
 # If DRYRUN is 'd' then we're in dry run mode (only print the called function),
 # otherwise call the function as normal with one less -d argument than we got
@@ -61,33 +60,33 @@ if [ ! -z $LSFMEM ]; then
     ARGS="$ARGS -m $LSFMEM"
 fi
 
-$BASH $SWW_HOME/src/submit-MGI.sh $ARGS $UUID $STEP 
+$BASH $SWW_HOME/src/submit-MGI.sh $ARGS $SN $mSTEP 
 }
 
 function launch_run {
-    UUID=$1
-    submit-MGI $UUID 1 # run_strelka
-    submit-MGI $UUID 2 # run_varscan
-    submit-MGI $UUID 5 32 # run_pindel  - run with 30 Gb of memory
+    mSN=$1
+    submit-MGI $mSN 1 # run_strelka
+    submit-MGI $mSN 2 # run_varscan
+    submit-MGI $mSN 5 32 # run_pindel  - run with 30 Gb of memory
 }
 
 function launch_parse {
-    UUID=$1
-    submit-MGI $UUID 3 # parse_strelka
-    submit-MGI $UUID 4 # parse_varscan
-    submit-MGI $UUID 7 # parse_pindel  
+    mSN=$1
+    submit-MGI $mSN 3 # parse_strelka
+    submit-MGI $mSN 4 # parse_varscan
+    submit-MGI $mSN 7 # parse_pindel  
 }
 
 function launch_merge {
-    UUID=$1
-    submit-MGI $UUID 8 # merge_vcf
+    mSN=$1
+    submit-MGI $mSN 8 # merge_vcf
 }
 
 # from BRCA77
 function launch_step {
-    UUID=$1
+    mSN=$1
     STEP=$2
-    submit-MGI $UUID $STEP $MEMGB
+    submit-MGI $mSN $STEP $MEMGB
 }
 
 CONFIGD="/data/config"
@@ -149,7 +148,7 @@ shift $((OPTIND-1))
 
 if [ "$#" -lt 1 ]; then
     >&2 echo Error: Wrong number of arguments
-    >&2 echo Usage: start_step.sh [options] UUID [UUID2 ...]
+    >&2 echo Usage: start_step.sh [options] SN [SN2 ...]
     exit 1
 fi
 
@@ -178,28 +177,28 @@ if [ -z $STEP ]; then
     exit 1
 fi
 
-# this allows us to get UUIDs in one of two ways:
-# 1: start_step.sh ... UUID1 UUID2 UUID3
-# 2: cat UUIDS.dat | start_step.sh ... -
+# this allows us to get SNs in one of two ways:
+# 1: start_step.sh ... SN1 SN2 SN3
+# 2: cat SNs.dat | start_step.sh ... -
 if [ $1 == "-" ]; then
-    UUIDS=$(cat - )
+    SNS=$(cat - )
 else
-    UUIDS="$@"
+    SNS="$@"
 fi
 
 # Loop over all remaining arguments
-for UUID in $UUIDS
+for SN in $SNS
 do
    if [ $STEP == 'run' ]; then
-       launch_run $UUID
+       launch_run $SN
    elif [ $STEP == 'parse' ]; then
-       launch_parse $UUID
+       launch_parse $SN
    elif [ $STEP == 'merge' ]; then
-       launch_merge $UUID
+       launch_merge $SN
    elif [ $STEP == 'vep' ]; then
-       launch_step $UUID '10'
+       launch_step $SN '10'
    elif [[ $STEP == '1' || $STEP == '2' || $STEP == '3' || $STEP == '4' || $STEP == '5' || $STEP == '7' || $STEP == '8' || $STEP == '10' ]]; then
-       launch_step $UUID $STEP 
+       launch_step $SN $STEP 
    else 
        >&2 echo Unknown step $STEP
        >&2 echo Must be one of "run", "parse", "merge", "vep", or a step number \(e.g. "1"\)
