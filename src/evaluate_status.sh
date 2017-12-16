@@ -15,6 +15,16 @@
 # -M: MGI environment.  Evaluate LSF logs 
 # -g: debug mode.  print debug statements of logic tests
 # -1: quit after one.
+# -e: Summarize sample status, returning one of the following for each:
+    # "runs ready to start"
+    # "runs incomplete"
+    # "runs had error"
+    # "parsing incomplete"
+    # "parsing ready to start"
+    # "merge ready to start"
+    # "merge incomplete"
+    # "workflow complete"
+    # "error"  # not used
 
 
 # Look at importGDC/batch.import/evaluate_status.sh
@@ -153,8 +163,125 @@ TEST10=$(test_LSF_success $LOGD/${SN}.STEP-10.out)  # run_vep
 printf "$SN\trun_strelka:$TEST1\trun_varscan:$TEST2\trun_pindel:$TEST5\tparse_strelka:$TEST3\tparse_varscan:$TEST4\tparse_pindel:$TEST7\tmerge_vcf:$TEST8\trun_vep:$TEST10\n"
 }
 
+# Usage: get_status LINE STEP
+# Where LINE is a single line from configuration file and STEP is the step name (e.g. 'run_varscan')
+# We do not assume an order for the columns
+function get_status {
+LINE=$1
+STEP=$2
+
+S=$(echo $LINE | awk -v step=$STEP '{ for(i = 1; i <= NF; i++) { if ($i ~ step) print $i; } }' )
+
+if [ -z $S ]; then
+>&2 echo Error: $STEP not found in $LINE
+>&2 echo Exiting
+exit
+fi
+
+echo $S | cut -f 2 -d :
+}
+
+
+function evaluate_start {
+SAMPLE_NAME=$1
+LINE=$2
+
+RUN_VARSCAN=$(get_status "$LINE" "run_varscan")
+RUN_PINDEL=$(get_status "$LINE" "run_pindel")
+RUN_STRELKA=$(get_status "$LINE" "run_strelka")
+
+PARSE_VARSCAN=$(get_status "$LINE" "parse_varscan")
+PARSE_PINDEL=$(get_status "$LINE" "parse_pindel")
+PARSE_STRELKA=$(get_status "$LINE" "parse_strelka")
+
+MERGE_VCF=$(get_status "$LINE" "merge_vcf")
+
+RUN_VEP=$(get_status "$LINE" "run_vep")
+
+# the logic here is empirical.  There can be a lot of various error conditions which aren't being caught
+
+# Runs are ready to start if status for all of them is 'unknown'
+RUNS_READY=0
+if [[ $RUN_VARSCAN == 'unknown' && $RUN_STRELKA == 'unknown' && $RUN_PINDEL == 'unknown' ]]; then
+RUNS_READY=1
+fi
+
+# any run errors 
+RUNS_HAD_ERROR=0
+if [[ $RUN_VARSCAN == "error"* || $RUN_STRELKA == "error"* || $RUN_PINDEL == "error"* ]]; then
+RUNS_HAD_ERROR=1
+fi
+
+# Runs are complete if all of them are completed
+RUNS_COMPLETE=0
+if [ $RUN_VARSCAN == 'completed' ] && [ $RUN_STRELKA == 'completed' ] && [ $RUN_PINDEL == 'completed' ]; then
+RUNS_COMPLETE=1
+fi
+
+# Parsing  ready to start if status for all of them is 'unknown'
+PARSE_READY=0
+if [ $PARSE_VARSCAN == 'unknown' ] && [ $PARSE_STRELKA == 'unknown' ] && [ $PARSE_PINDEL == 'unknown' ]; then
+PARSE_READY=1
+fi
+
+# Parsing is complete if status for all of them is 'completed'
+PARSE_COMPLETE=0
+if [ $PARSE_VARSCAN == 'completed' ] && [ $PARSE_STRELKA == 'completed' ] && [ $PARSE_PINDEL == 'completed' ]; then
+PARSE_COMPLETE=1
+fi
+
+# Merge ready if status is 'unknown'
+MERGE_READY=0
+if [ $MERGE_VCF == 'unknown' ]; then
+MERGE_READY=1
+fi
+
+# Merge complete if status is 'completed'
+MERGE_COMPLETE=0
+if [ $MERGE_VCF == 'completed' ]; then
+MERGE_COMPLETE=1
+fi
+
+# VEP ready if status is 'completed'
+VEP_READY=0
+if [ $RUN_VEP == 'unknown' ]; then
+VEP_READY=1
+fi
+
+# VEP complete if status is 'completed'
+VEP_COMPLETE=0
+if [ $RUN_VEP == 'completed' ]; then
+VEP_COMPLETE=1
+fi
+
+if [ $RUNS_HAD_ERROR -eq 1 ]; then
+    SS="runs_had_error"
+elif [ $RUNS_READY -eq 1 ]; then
+    SS="runs_ready_to_start"
+elif [ ! $RUNS_READY -eq 1 ] && [ ! $RUNS_COMPLETE -eq 1 ]; then
+    SS="runs_incomplete"
+elif [ $RUNS_COMPLETE -eq 1 ] && [ $PARSE_READY -eq 1 ]; then
+    SS="parsing_ready_to_start"
+elif [ ! $PARSE_READY -eq 1 ] && [ ! $PARSE_COMPLETE -eq 1 ]; then
+    SS="parsing_incomplete"
+elif [ $PARSE_COMPLETE -eq 1 ] && [ $MERGE_READY -eq 1 ]; then
+    SS="merge_ready_to_start"
+elif [ ! $MERGE_READY -eq 1 ] && [ ! $MERGE_COMPLETE -eq 1 ]; then
+    SS="merge_incomplete"
+elif [ $MERGE_COMPLETE -eq 1 ] && [ $VEP_READY -eq 1 ]; then
+    SS="vep_ready_to_start"
+elif [ $VEP_COMPLETE -eq 1 ]; then
+    SS="workflow_complete"
+else
+    SS="error"
+fi
+
+printf "$SAMPLE_NAME\t$SS\n"
+
+}
+
 # http://wiki.bash-hackers.org/howto/getopts_tutorial
-while getopts ":uf:D:S:g1" opt; do
+while getopts ":uf:D:S:g1e" opt; do
   case $opt in
     u)  
       SN_ONLY=1
@@ -173,6 +300,9 @@ while getopts ":uf:D:S:g1" opt; do
       ;;
     g)  
       DEBUG=1
+      ;;
+    e)  
+      SUMMARY=1
       ;;
     1)  
       QAO=1 # quot after one
@@ -209,6 +339,15 @@ while read L; do
     SN=$(echo "$L" | cut -f 2)   # sample name
 
     STATUS=$(get_job_status $SN )
+    # Example Status line:
+    # C3N-00734.WXS run_strelka:unknown run_varscan:unknown run_pindel:unknown  parse_strelka:unknown   parse_varscan:unknown   parse_pindel:unknown    merge_vcf:unknownrun_vep:unknown
+
+    debug $STATUS 
+    if [ $SUMMARY ]; then
+        SUMMARY_STATUS=$(evaluate_start $SN "$STATUS")
+        debug $SUMMARY_STATUS
+        STATUS=$SUMMARY_STATUS
+    fi
 
     # which columns to output?
     if [ ! -z $SN_ONLY ]; then
