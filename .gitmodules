@@ -1,0 +1,4 @@
+[submodule "somaticwrapper"]
+	path = somaticwrapper
+	url = https://github.com/ding-lab/somaticwrapper
+	branch = docker
