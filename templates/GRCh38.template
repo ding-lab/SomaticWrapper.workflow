@@ -11,7 +11,7 @@ assembly = GRCh38
 
 dbsnp_db = /data/image.data/B_Filter/dbsnp.noCOSMIC.GRCh38.vcf.gz
 
-sw_dir = /gscuser/mwyczalk/projects/SomaticWrapper/somaticwrapper
+sw_dir = SomaticWrapper.workflow/somaticwrapper
 # This creates VEP data annotated with gene names both as final output and for key intermediate files
 output_vep = 1
 annotate_intermediate = 1
