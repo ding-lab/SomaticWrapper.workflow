@@ -14,10 +14,10 @@ snpsift_jar = /usr/local/snpEff/SnpSift.jar
 varscan_jar = /usr/local/VarScan.jar
 
 # The following paths/files are to be visible from container
-sw_dir = /gscuser/mwyczalk/projects/SomaticWrapper/somaticwrapper
-strelka_config = /gscuser/mwyczalk/projects/SomaticWrapper/somaticwrapper/params/strelka.WES.ini
-varscan_config = /gscuser/mwyczalk/projects/SomaticWrapper/somaticwrapper/params/varscan.WES.ini
-pindel_config = /gscuser/mwyczalk/projects/SomaticWrapper/somaticwrapper/params/pindel.WES.ini
+sw_dir = SomaticWrapper.workflow/somaticwrapper
+strelka_config = SomaticWrapper.workflow/somaticwrapper/params/strelka.WES.ini
+varscan_config = SomaticWrapper.workflow/somaticwrapper/params/varscan.WES.ini
+pindel_config = SomaticWrapper.workflow/somaticwrapper/params/pindel.WES.ini
 
 # This creates VEP data annotated with gene names both as final output and for key intermediate files
 output_vep = 1
