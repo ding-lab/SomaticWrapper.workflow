@@ -113,6 +113,9 @@ STEP=$1; shift
 CONFIG="$CONFIGD/$SN.config"
 >&2 echo Using configuration file $CONFIG
 
+# MGI allows multiple volumes to be mounted
+# https://confluence.gsc.wustl.edu/pages/viewpage.action?pageId=31491896
+# This should be done to allow BAM files and analysis results to be independently located
 >&2 echo "/data mounts to $DATAD "
 export LSF_DOCKER_VOLUMES="$DATAD:/data"
 
