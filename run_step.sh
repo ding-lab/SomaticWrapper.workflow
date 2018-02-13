@@ -8,7 +8,7 @@
 # Key Directories, [H] and [C] indicate whether paths relative to host machine or container
 # * DATAD - mount point of container's /data on host machine [H]
 # * SWW_HOME - path to SomaticWrapper.workflow [H]
-# * SW_HOME_C - path to SomaticWrapper.workflow relative to container
+# * SW_HOME_C - path to somaticwrapper core relative to container
 # * SCRIPTD - location of LSF logs and launch scripts [H]
 # * CONFIGD - location of config files, visible from container [C]
 # * SWDATA - base directory of SomaticWrapper data output [C].  This is passed via configuation file

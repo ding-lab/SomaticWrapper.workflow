@@ -5,11 +5,12 @@ tumor_bam = TUMOR_BAM
 normal_bam = NORMAL_BAM
 sample_name = SAMPLE_NAME
 
-reference_fasta = /data/image.data/A_Reference/Homo_sapiens_assembly19.fasta
-reference_dict = /data/image.data/A_Reference/Homo_sapiens_assembly19.dict
+# /image is mapped to $IMAGED_H
+reference_fasta = /image/A_Reference/Homo_sapiens_assembly19.fasta
+reference_dict = /image/A_Reference/Homo_sapiens_assembly19.dict
 assembly = GRCh37
 
-dbsnp_db = /data/image.data/B_Filter/dbsnp.noCOSMIC.GRCh37.vcf.gz
+dbsnp_db = /image/B_Filter/dbsnp.noCOSMIC.GRCh37.vcf.gz
 snpsift_jar = /usr/local/snpEff/SnpSift.jar
 varscan_jar = /usr/local/VarScan.jar
 
