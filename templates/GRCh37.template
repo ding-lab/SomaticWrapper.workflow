@@ -15,7 +15,7 @@ snpsift_jar = /usr/local/snpEff/SnpSift.jar
 varscan_jar = /usr/local/VarScan.jar
 
 # The following paths/files are to be visible from container
-sw_dir = SomaticWrapper.workflow/somaticwrapper
+sw_dir = /usr/local/somaticwrapper
 strelka_config = SomaticWrapper.workflow/somaticwrapper/params/strelka.WES.ini
 varscan_config = SomaticWrapper.workflow/somaticwrapper/params/varscan.WES.ini
 pindel_config = SomaticWrapper.workflow/somaticwrapper/params/pindel.WES.ini

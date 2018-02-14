@@ -61,7 +61,7 @@ function submit_step {
         ARGS="$ARGS -$DRYRUN"
     fi
 
-    ARGS="$ARGS -s $SCRIPTD_H -c $CONFIGD_C"
+    ARGS="$ARGS -s $SCRIPTD_H -c $CONFIGD_C -T $IMPORTD_H"
     if [ ! -z $LSFMEM ]; then
         ARGS="$ARGS -m $LSFMEM"
     fi
@@ -110,15 +110,15 @@ while getopts ":D:T:I:s:p:c:S:dg:MBm:w:h:" opt; do
       ;;
     s)  
       SCRIPTD_H="$OPTARG"
-      >&2 echo "Log/script dir: $SCRIPTD_H" 
+      >&2 echo "Log/script dir [H]: $SCRIPTD_H" 
       ;;
     p)  
       SWW_HOME_H="$OPTARG"
-      >&2 echo "SomaticWrapper.workflow dir: $SWW_HOME_H" 
+      >&2 echo "SomaticWrapper.workflow dir [H]: $SWW_HOME_H" 
       ;;
     c)
       CONFIGD_C="$OPTARG"
-      >&2 echo "Configuration dir: $CONFIGD_C" 
+      >&2 echo "Configuration dir [C]: $CONFIGD_C" 
       ;;
     S) 
       STEP="$OPTARG"
@@ -174,8 +174,8 @@ if [ -d $IMPORTD_H ]; then
     >&2 echo /import directly mapped to $IMPORTD_H
 elif [ -f $IMPORTD_H ]; then
     >&2 echo /import mapped according to $IMPORTD_H
-    IMPORTD_LOOKUP=$IMPORTD_H
-elif 
+    IMPORTDAT_H=$IMPORTD_H
+else
     >&2 echo Error: -T IMPORTD_H = $IMPORTD_H not found.  Quitting
     exit 1
 fi
@@ -214,11 +214,11 @@ fi
 for SN in $SNS
 do
     # Lookup IMPORTD_H for each SN if necessary
-    if [ $IMPORTD_LOOKUP ]; then
-        IMPORTD_H=$(grep $SN $IMPORTD_LOOKUP | cut -f 2 )
+    if [ $IMPORTDAT_H ]; then
+        IMPORTD_H=$(grep $SN $IMPORTDAT_H | cut -f 2 )
         >&2 echo Got IMPORTD_H = $IMPORTD_H
         if [ -z $IMPORTD_H ]; then
-            >&2 echo Cannot find /import mapping $SN in $IMPORTD_LOOKUP.  Quitting.
+            >&2 echo Cannot find /import mapping $SN in $IMPORTDAT_H.  Quitting.
             exit 1
         fi        
     fi

@@ -59,11 +59,12 @@ function launch_step {
     #CMD="/bin/bash $PROCESS $XARGS $UUID $TOKEN_C $FN $DF"
     CMD="perl $SW_HOME_C/SomaticWrapper.pl $STEP $CONFIG_C"
 
-    # using --mount rather than -v, as per https://docs.docker.com/storage/volumes/#choose-the--v-or-mount-flag
-    MOUNTARG="\
-    --mount data=$DATAD_H,target=/data \
-    --mount data=$IMPORTD_H,target=/import \
-    --mount data=$IMAGED_H,target=/image "
+    # https://docs.docker.com/storage/volumes/#choose-the--v-or-mount-flag
+    # want to use volumes
+    MOUNTARG=" \
+        --volume $DATAD_H:/data \
+        --volume $IMPORTD_H:/import:ro \
+        --volume $IMAGED_H:/image:ro "
 
     if [ ! $RUNBASH ]; then
         $DOCKER run $MOUNTARG $DOCKER_IMAGE $CMD >&2
@@ -236,7 +237,7 @@ if [ -z $SCRIPTD_H ]; then
     exit 1
 fi
 if [ -z $IMPORTD_H ]; then
-    >&2 echo /import directory not defined \(-M IMPORTD_H\)
+    >&2 echo /import directory not defined \(-T IMPORTD_H\)
     exit 1
 fi
 if [ -z $IMAGED_H ]; then
@@ -267,5 +268,5 @@ if [ $MGI ]; then
     launch_step_MGI $SN $STEP #$IMPORT_DATAD_H $TOKEN_C $FN $DF $LOGD_H
 else
     #launch_step $UUID $IMPORT_DATAD_H $TOKEN_C $FN $DF
-    launch_step $UUID $IMPORT_DATAD_H $TOKEN_C $FN $DF
+    launch_step $SN $STEP
 fi
