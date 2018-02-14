@@ -29,7 +29,7 @@
 # -d: dry run.  This may be repeated (e.g., -dd or -d -d) to pass the -d argument to called functions instead, 
 #     with each called function called in dry run mode if it gets one -d, and popping off one and passing rest otherwise
 # -g LSF_GROUP: LSF group to use starting job
-# -M: MGI environment.  Non-MGI environment currently not implemented
+# -M: MGI environment.  
 # -h DOCKERHOST - define a LSF host to execute the image.  MGI only
 # -B: Run BASH in Docker instead of gdc-client
 # -m mGb: requested memory in Gb (requires numeric step, e.g. '1')
@@ -37,60 +37,62 @@
 # If argument SN is - then read SN from STDIN
 
 # dual MGI/docker functionality based on /Users/mwyczalk/Data/CPTAC3/importGDC.CPTAC3.b1/importGDC/GDC_import.sh
-function submit-MGI {
-SN=$1
-mSTEP=$2
-LSFMEM=$3  # Mem request in Gb, may be empty
+# function below is analogous to launch_import() in :
+#   /Users/mwyczalk/Data/CPTAC3/importGDC.CPTAC3.b1/importGDC/start_step.sh
+function submit_step {
+    SN=$1
+    mSTEP=$2
+    LSFMEM=$3  # Mem request in Gb, may be empty
 
-ARGS=$XARGS  # XARGS is a global, don't want to modify it here
+    ARGS=$XARGS  # XARGS is a global, don't want to modify it here
 
->&2 echo Starting step $mSTEP for $SN 
+    >&2 echo Starting step $mSTEP for $SN 
 
-# If DRYRUN is 'd' then we're in dry run mode (only print the called function),
-# otherwise call the function as normal with one less -d argument than we got
-if [ -z $DRYRUN ]; then   # DRYRUN not set
-    BASH="/bin/bash"
-elif [ $DRYRUN == "d" ]; then  # DRYRUN is -d: echo the command rather than executing it
-    BASH="echo /bin/bash"
-    >&2 echo "Dry run in $0"
-else    # DRYRUN has multiple d's: strip one d off the argument and pass it to function
-    BASH="/bin/bash"
-    DRYRUN=${DRYRUN%?}
-    ARGS="$ARGS -$DRYRUN"
-fi
+    # If DRYRUN is 'd' then we're in dry run mode (only print the called function),
+    # otherwise call the function as normal with one less -d argument than we got
+    if [ -z $DRYRUN ]; then   # DRYRUN not set
+        BASH="/bin/bash"
+    elif [ $DRYRUN == "d" ]; then  # DRYRUN is -d: echo the command rather than executing it
+        BASH="echo /bin/bash"
+        >&2 echo "Dry run in $0"
+    else    # DRYRUN has multiple d's: strip one d off the argument and pass it to function
+        BASH="/bin/bash"
+        DRYRUN=${DRYRUN%?}
+        ARGS="$ARGS -$DRYRUN"
+    fi
 
-ARGS="$ARGS -s $SCRIPTD_H -c $CONFIGD_C"
-if [ ! -z $LSFMEM ]; then
-    ARGS="$ARGS -m $LSFMEM"
-fi
+    ARGS="$ARGS -s $SCRIPTD_H -c $CONFIGD_C"
+    if [ ! -z $LSFMEM ]; then
+        ARGS="$ARGS -m $LSFMEM"
+    fi
 
-$BASH $SWW_HOME_H/submit-MGI.sh $ARGS $SN $mSTEP 
+    $BASH $SWW_HOME_H/launch_somaticwrapper.sh $ARGS $SN $mSTEP 
 }
 
 function launch_run {
     mSN=$1
-    submit-MGI $mSN 1 # run_strelka
-    submit-MGI $mSN 2 # run_varscan
-    submit-MGI $mSN 5 32 # run_pindel  - run with 30 Gb of memory
+    submit_step $mSN 1 # run_strelka
+    submit_step $mSN 2 # run_varscan
+    submit_step $mSN 5 32 # run_pindel  - run with 30 Gb of memory
 }
 
 function launch_parse {
     mSN=$1
-    submit-MGI $mSN 3 # parse_strelka
-    submit-MGI $mSN 4 # parse_varscan
-    submit-MGI $mSN 7 # parse_pindel  
+    submit_step $mSN 3 # parse_strelka
+    submit_step $mSN 4 # parse_varscan
+    submit_step $mSN 7 # parse_pindel  
 }
 
 function launch_merge {
     mSN=$1
-    submit-MGI $mSN 8 # merge_vcf
+    submit_step $mSN 8 # merge_vcf
 }
 
 # from BRCA77
 function launch_step {
     mSN=$1
     STEP=$2
-    submit-MGI $mSN $STEP $MEMGB
+    submit_step $mSN $STEP $MEMGB
 }
 
 CONFIGD_C="/data/config"
