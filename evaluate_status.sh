@@ -10,8 +10,8 @@
 # options
 # -f status: output only lines matching status, e.g., -f run_pindel:complete
 # -u: include only SN in output
-# -D DATAD: path to base of SomaticWrapper analysis directory.  Required
-# -S SCRIPTD: path to LSF logs. Required
+# # -D DATAD: path to base of SomaticWrapper analysis directory.  Required.  Does not seem to be used, commenting this out
+# -S SCRIPTD: path to LSF logs ($SCRIPTD/logs). Required
 # -M: MGI environment.  Evaluate LSF logs 
 # -g: debug mode.  print debug statements of logic tests
 # -1: quit after one.
@@ -281,7 +281,7 @@ printf "$SAMPLE_NAME\t$SS\n"
 }
 
 # http://wiki.bash-hackers.org/howto/getopts_tutorial
-while getopts ":uf:D:S:g1e" opt; do
+while getopts ":uf:S:g1e" opt; do
   case $opt in
     u)  
       SN_ONLY=1
@@ -292,9 +292,9 @@ while getopts ":uf:D:S:g1e" opt; do
     f) 
       FILTER=$OPTARG
       ;;
-    D) # set DATA_DIR
-      DATAD="$OPTARG"
-      ;;
+#    D) # set DATA_DIR
+#      DATAD="$OPTARG"
+#      ;;
     S) 
       SCRIPTD="$OPTARG"
       ;;
@@ -327,10 +327,10 @@ fi
 
 BATCH=$1
 
-if [ ! -e $DATD ]; then
-    >&2 echo "Error: Data directory does not exist: $DATD"
-    exit 1
-fi
+#if [ ! -e $DATD ]; then
+#    >&2 echo "Error: Data directory does not exist: $DATD"
+#    exit 1
+#fi
 
 while read L; do
     # Skip comments and header
