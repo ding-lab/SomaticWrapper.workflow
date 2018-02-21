@@ -33,6 +33,7 @@
 # -h DOCKERHOST - define a LSF host to execute the image.  MGI only
 # -B: Run BASH in Docker instead of gdc-client
 # -m mGb: requested memory in Gb (requires numeric step, e.g. '1')
+# -W: Mount all volumes rw (default is to mount /image and /import as ro (read only))
 #
 # If argument SN is - then read SN from STDIN
 
@@ -97,7 +98,7 @@ function launch_step {
 
 CONFIGD_C="/data/config"
 
-while getopts ":D:T:I:s:p:c:S:dg:MBm:w:h:" opt; do
+while getopts ":D:T:I:s:p:c:S:dg:MBm:w:h:W" opt; do
   case $opt in
     D) # set DATAD_H
       XARGS="$XARGS -D $OPTARG"
@@ -144,6 +145,9 @@ while getopts ":D:T:I:s:p:c:S:dg:MBm:w:h:" opt; do
       ;;
     h)  # DOCKERHOST
       XARGS="$XARGS -h $OPTARG"
+      ;;
+    W)  # MOUNTRW
+      XARGS="$XARGS -W"
       ;;
     \?)
       >&2 echo "Invalid option: -$OPTARG"

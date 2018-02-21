@@ -287,7 +287,7 @@ while getopts ":uf:S:g1e" opt; do
       SN_ONLY=1
       ;;
     M)  
-      MGI=1
+      MGI=1  # currently doesn't do anything
       ;;
     f) 
       FILTER=$OPTARG

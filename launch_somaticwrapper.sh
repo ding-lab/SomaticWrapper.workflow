@@ -22,6 +22,7 @@
 #     with each called function called in dry run mode if it gets one -d, and popping off one and passing rest otherwise
 # -g LSF_GROUP: LSF group to start in.  MGI-specific
 # -B: run bash instead of starting SomaticWrapper
+# -W: Mount all volumes rw (default is to mount /image and /import as ro (read only))
 
 # MGI Mode
 # * Writes LSF logs to $SCRIPTD/logs
@@ -60,11 +61,17 @@ function launch_step {
     CMD="perl $SW_HOME_C/SomaticWrapper.pl $STEP $CONFIG_C"
 
     # https://docs.docker.com/storage/volumes/#choose-the--v-or-mount-flag
-    # want to use volumes
-    MOUNTARG=" \
-        --volume $DATAD_H:/data \
-        --volume $IMPORTD_H:/import:ro \
-        --volume $IMAGED_H:/image:ro "
+    if [ $MOUNTRW ]; then
+        MOUNTARG=" \
+            --volume $DATAD_H:/data \
+            --volume $IMPORTD_H:/import \
+            --volume $IMAGED_H:/image "
+    else
+        MOUNTARG=" \
+            --volume $DATAD_H:/data \
+            --volume $IMPORTD_H:/import:ro \
+            --volume $IMAGED_H:/image:ro "
+    fi
 
     if [ ! $RUNBASH ]; then
         $DOCKER run $MOUNTARG $DOCKER_IMAGE $CMD >&2
@@ -88,10 +95,14 @@ function launch_step_MGI {
 # MGI allows multiple volumes to be mounted
 # https://confluence.gsc.wustl.edu/pages/viewpage.action?pageId=31491896
 # There are 3 mount points:
-# /data maps to $DATAD_H
-# /import maps to $IMPORTD_H
-# /image maps to $IMAGED_H
+# * /data maps to $DATAD_H
+# * /import maps to $IMPORTD_H
+# * /image maps to $IMAGED_H
+# Currently all are mounted rw
     export LSF_DOCKER_VOLUMES="$DATAD_H:/data $IMPORTD_H:/import $IMAGED_H:/image"
+
+# This prevents environment variables from being clobbered: https://confluence.ris.wustl.edu/pages/viewpage.action?pageId=30712521
+    export LSF_DOCKER_PRESERVE_ENVIRONMENT="false"
 
     # Here we're generating a script which will be run in new container to launch a job after sourcing environment variables
     LAUNCHD_H="$SCRIPTD_H/launch"; mkdir -p $LAUNCHD_H
@@ -110,6 +121,7 @@ function launch_step_MGI {
     >&2 echo Generating run script $SCRIPT_H
     # this script below is icky but for some reason `source /home/sw/.bashrc` does not make
     # variables "stick" - echo $PATH returns MGI environment.  Worth investigating more
+    # TODO: see if LSF_DOCKER_PRESERVE_ENVIRONMENT allows us to get rid of the vars below
     cat << EOF > $SCRIPT_H
 #!/bin/bash
 
@@ -171,7 +183,7 @@ SW_HOME_C="/usr/local/somaticwrapper"
 LSF_ARGS=""
 
 # http://wiki.bash-hackers.org/howto/getopts_tutorial
-while getopts "D:s:c:w:m:h:dg:BT:I:" opt; do
+while getopts "D:s:c:w:m:h:dg:BT:I:W" opt; do
   case $opt in
     D)
       DATAD_H=$OPTARG
@@ -216,6 +228,9 @@ while getopts "D:s:c:w:m:h:dg:BT:I:" opt; do
     B)
       RUNBASH=1
       >&2 echo Run bash
+      ;;
+    W)
+      MOUNTRW=1
       ;;
     \?)
       >&2 echo "Invalid option: -$OPTARG"

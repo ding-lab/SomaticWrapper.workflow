@@ -9,11 +9,11 @@
 import sys
 
 # key/value pairs in template and data file are delimited by =
-# lines beginning with # are ignored
+# text after # is ignored
 def read_key_value(params, f):
     for line in f:
-        if line.startswith('#'): continue
-        if not line.strip(): continue  # ignore blank lines
+        line = line.strip().partition("#")[0]
+        if not line: continue  # ignore blank lines
         key, val = line.partition("=")[::2]
         params[key.strip()] = val.strip()
 
