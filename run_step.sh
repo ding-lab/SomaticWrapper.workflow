@@ -1,14 +1,14 @@
 #!/bin/bash
 # author: Matthew Wyczalkowski m.wyczalkowski@wustl.edu
 
-# Usage: start_step.sh [options] SN [SN2 ...]
+# Usage: start_step.sh [options] RN [RN2 ...]
 #
 # Start processing sample name(s) step.  Run on host computer
 
 # Key Directories, [H] and [C] indicate whether paths relative to host machine or container
 # * DATAD_H - mount point of container's /data on host machine [H]
-# * IMPORTD_H - mount point of containers /import.  Alternatively, this may be a TSV file (importd.dat) with
-#       run name as first column, IMPORTD_H directory mapping in second, to allow for dynamic mapping
+# * IMPORTD_H - mount point of containers /import.  Alternatively, this may be a TSV file (batch.dat) with
+#       (case, run_name, IMPORTD_H) as columns to allow for dynamic mapping
 # * IMAGED_H - mount point of container's /image [H]
 # * SWW_HOME_H - path to SomaticWrapper.workflow [H]
 # * SW_HOME_C - path to somaticwrapper core relative to container
@@ -22,7 +22,7 @@
 # -s SCRIPTD_H: Logs and scripts will be written to $SCRIPTD_H/logs and /launch, respectively.  Required
 # -p SWW_HOME_H: Must be set with -p or SWW_HOME_H environment variable.
 # -w SW_HOME_C: default [/usr/local/somaticwrapper]
-# -c CONFIGD_C: default [/data/config].  Configuration file is $CONFIGD_C/$SN.config
+# -c CONFIGD_C: default [/data/config].  Configuration file is $CONFIGD_C/$RN.config
 #
 # Other arguments
 # -S: step.  Must be one of "run", "parse", "merge", "vep", or a step number \(e.g. "1"\).  Required
@@ -35,19 +35,19 @@
 # -m mGb: requested memory in Gb (requires numeric step, e.g. '1')
 # -W: Mount all volumes rw (default is to mount /image and /import as ro (read only))
 #
-# If argument SN is - then read SN from STDIN
+# If argument RN is - then read RN from STDIN
 
 # dual MGI/docker functionality based on /Users/mwyczalk/Data/CPTAC3/importGDC.CPTAC3.b1/importGDC/GDC_import.sh
 # function below is analogous to launch_import() in :
 #   /Users/mwyczalk/Data/CPTAC3/importGDC.CPTAC3.b1/importGDC/start_step.sh
 function submit_step {
-    SN=$1
+    RN=$1
     mSTEP=$2
     LSFMEM=$3  # Mem request in Gb, may be empty
 
     ARGS=$XARGS  # XARGS is a global, don't want to modify it here
 
-    >&2 echo Starting step $mSTEP for $SN 
+    >&2 echo Starting step $mSTEP for $RN 
 
     # If DRYRUN is 'd' then we're in dry run mode (only print the called function),
     # otherwise call the function as normal with one less -d argument than we got
@@ -67,33 +67,33 @@ function submit_step {
         ARGS="$ARGS -m $LSFMEM"
     fi
 
-    $BASH $SWW_HOME_H/launch_somaticwrapper.sh $ARGS $SN $mSTEP 
+    $BASH $SWW_HOME_H/launch_somaticwrapper.sh $ARGS $RN $mSTEP 
 }
 
 function launch_run {
-    mSN=$1
-    submit_step $mSN 1 # run_strelka
-    submit_step $mSN 2 # run_varscan
-    submit_step $mSN 5 32 # run_pindel  - run with 30 Gb of memory
+    mRN=$1
+    submit_step $mRN 1 # run_strelka
+    submit_step $mRN 2 # run_varscan
+    submit_step $mRN 5 32 # run_pindel  - run with 30 Gb of memory
 }
 
 function launch_parse {
-    mSN=$1
-    submit_step $mSN 3 # parse_strelka
-    submit_step $mSN 4 # parse_varscan
-    submit_step $mSN 7 # parse_pindel  
+    mRN=$1
+    submit_step $mRN 3 # parse_strelka
+    submit_step $mRN 4 # parse_varscan
+    submit_step $mRN 7 # parse_pindel  
 }
 
 function launch_merge {
-    mSN=$1
-    submit_step $mSN 8 # merge_vcf
+    mRN=$1
+    submit_step $mRN 8 # merge_vcf
 }
 
 # from BRCA77
 function launch_step {
-    mSN=$1
+    mRN=$1
     STEP=$2
-    submit_step $mSN $STEP $MEMGB
+    submit_step $mRN $STEP $MEMGB
 }
 
 CONFIGD_C="/data/config"
@@ -163,7 +163,12 @@ shift $((OPTIND-1))
 
 if [ "$#" -lt 1 ]; then
     >&2 echo Error: Wrong number of arguments
-    >&2 echo Usage: start_step.sh [options] SN [SN2 ...]
+    >&2 echo Usage: start_step.sh [options] RN [RN2 ...]
+    exit 1
+fi
+
+if [ -z $STEP ]; then
+    >&2 echo Error: Step not defined \[-S STEP\]
     exit 1
 fi
 
@@ -200,42 +205,38 @@ if [ -z $SCRIPTD_H ]; then
     exit 1
 fi
 
-if [ -z $STEP ]; then
-    >&2 echo Error: Step not defined \[-S STEP\]
-    exit 1
-fi
 
-# this allows us to get SNs in one of two ways:
-# 1: start_step.sh ... SN1 SN2 SN3
-# 2: cat SNs.dat | start_step.sh ... -
+# this allows us to get RNs in one of two ways:
+# 1: start_step.sh ... RN1 RN2 RN3
+# 2: cat RNs.dat | start_step.sh ... -
 if [ $1 == "-" ]; then
-    SNS=$(cat - )
+    RNS=$(cat - )
 else
-    SNS="$@"
+    RNS="$@"
 fi
 
 # Loop over all remaining arguments
-for SN in $SNS
+for RN in $RNS
 do
-    # Lookup IMPORTD_H for each SN if necessary
+    # Lookup IMPORTD_H for each RN if necessary
     if [ $IMPORTDAT_H ]; then
-        IMPORTD_H=$(grep $SN $IMPORTDAT_H | cut -f 2 )
+        IMPORTD_H=$(grep $RN $IMPORTDAT_H | cut -f 3 )
         >&2 echo Got IMPORTD_H = $IMPORTD_H
         if [ -z $IMPORTD_H ]; then
-            >&2 echo Cannot find /import mapping $SN in $IMPORTDAT_H.  Quitting.
+            >&2 echo Cannot find /import mapping $RN in $IMPORTDAT_H.  Quitting.
             exit 1
         fi        
     fi
     if [ $STEP == 'run' ]; then
-        launch_run $SN
+        launch_run $RN
     elif [ $STEP == 'parse' ]; then
-        launch_parse $SN
+        launch_parse $RN
     elif [ $STEP == 'merge' ]; then
-        launch_merge $SN
+        launch_merge $RN
     elif [ $STEP == 'vep' ]; then
-        launch_step $SN '10'
+        launch_step $RN '10'
     elif [[ $STEP == '1' || $STEP == '2' || $STEP == '3' || $STEP == '4' || $STEP == '5' || $STEP == '7' || $STEP == '8' || $STEP == '10' ]]; then
-        launch_step $SN $STEP 
+        launch_step $RN $STEP 
     else 
         >&2 echo Unknown step $STEP
         >&2 echo Must be one of "run", "parse", "merge", "vep", or a step number \(e.g. "1"\)
